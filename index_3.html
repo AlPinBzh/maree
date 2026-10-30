@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Marée</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FBF4F3">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Marée">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout : app mobile à 4 onglets (Aujourd'hui, Courbe, Calendrier, Mon cycle), colonne de 480px max, saisie du jour sur l'écran d'accueil, fiche d'un autre jour en feuille basse */
+:root{
+  --bg:#FBF4F3; --surface:#FFFFFF; --surface-2:#F5EAE8; --fg:#2B1D22; --muted:#87717A; --line:#EBDBDC;
+  --regles:#DE4F69; --regles-soft:#FBE0E5;
+  --pre:#4C86C9; --pre-soft:#E0ECF8;
+  --ovu:#8676D6; --ovu-soft:#E8E4FA;
+  --post:#D88A45; --post-soft:#FBE9D9;
+  --fin:#A0607C; --fin-soft:#F3E2EA;
+  --ok:#2F9470; --ok-soft:#DBF0E6;
+  --warn:#B9771A; --warn-soft:#FBEED6;
+  --on-accent:#FFFFFF; --danger:#B4364D;
+  --shadow:0 8px 28px rgba(120,55,72,.08);
+  --f-display:"Instrument Serif","Iowan Old Style",Georgia,serif;
+  --f-body:"Figtree",-apple-system,"SF Pro Text",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#191215; --surface:#241A1E; --surface-2:#2E2328; --fg:#F7ECEE; --muted:#B29BA3; --line:#3A2C32;
+  --regles:#F26C84; --regles-soft:#4A2531; --pre:#7FAEE6; --pre-soft:#1F3049; --ovu:#A397EE; --ovu-soft:#2D2949;
+  --post:#EFAE73; --post-soft:#45301F; --fin:#D48EAC; --fin-soft:#3F2532; --ok:#5CC79C; --ok-soft:#1C3A2E;
+  --warn:#E8B04F; --warn-soft:#43341A; --danger:#F08A9C; --shadow:0 8px 28px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#191215; --surface:#241A1E; --surface-2:#2E2328; --fg:#F7ECEE; --muted:#B29BA3; --line:#3A2C32;
+  --regles:#F26C84; --regles-soft:#4A2531; --pre:#7FAEE6; --pre-soft:#1F3049; --ovu:#A397EE; --ovu-soft:#2D2949;
+  --post:#EFAE73; --post-soft:#45301F; --fin:#D48EAC; --fin-soft:#3F2532; --ok:#5CC79C; --ok-soft:#1C3A2E;
+  --warn:#E8B04F; --warn-soft:#43341A; --danger:#F08A9C; --shadow:0 8px 28px rgba(0,0,0,.25); color-scheme:dark}
+
+/* Base (remplace le cadre de claude.ai) */
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.45;
+  -webkit-tap-highlight-color:transparent;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--regles);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;padding-block:12px calc(96px + env(safe-area-inset-bottom,0px))}
+.view{display:flex;flex-direction:column;gap:16px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;padding-top:8px;gap:12px}
+.eyebrow{margin:0;color:var(--muted);font-size:13px;font-weight:500}
+.eyebrow::first-letter{text-transform:uppercase}
+.brand{margin:0;font-family:var(--f-display);font-weight:400;font-size:34px;line-height:1.1}
+h2{font-family:var(--f-display);font-weight:400;font-size:27px;line-height:1.15;margin:0;text-wrap:balance}
+h3{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+p{margin:0}
+.card{background:var(--surface);border-radius:24px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.info{font-size:13px;color:var(--muted)}
+
+.demo{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--surface-2);border-radius:16px;padding:10px 14px;font-size:14px}
+.demo button{border:0;background:var(--fg);color:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;white-space:nowrap}
+
+/* Semaine */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.week button{border:0;background:none;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.week .wd{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase}
+.num{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-variant-numeric:tabular-nums;border:2px solid transparent}
+.is-today .wd{color:var(--fg);font-weight:700}
+.is-today .num{border-color:var(--fg)}
+.m-period{background:var(--regles);color:var(--on-accent)}
+.m-pred{border:2px dashed var(--regles)!important;color:var(--regles)}
+.m-fertile{background:var(--ovu-soft);color:var(--ovu)}
+.m-fertest{border:2px dashed var(--ovu)!important;color:var(--ovu)}
+
+/* Anneau */
+.hero{position:relative;display:grid;place-items:center}
+.ring{width:min(84vw,320px);height:auto;display:block}
+.rlab{font-family:var(--f-body);font-size:11.5px;font-weight:700;letter-spacing:.02em}
+.pcurve{width:100%;height:auto;display:block}
+.pcurve text{font-family:var(--f-body);font-size:11px;font-weight:600}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;pointer-events:none}
+.ring-label{font-size:14px;font-weight:600;color:var(--muted)}
+.ring-big{font-family:var(--f-display);font-size:50px;line-height:1.05}
+.ring-sub{font-size:13px;color:var(--muted);max-width:180px}
+
+.primary{width:100%;border:0;border-radius:999px;padding:17px 20px;background:var(--regles);color:var(--on-accent);font-weight:700;font-size:17px}
+.primary.end{background:var(--surface);color:var(--regles);border:2px solid var(--regles)}
+.ghost{border:0;background:var(--surface-2);border-radius:999px;padding:12px 16px;font-weight:600;font-size:15px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > *{flex:1 1 auto}
+.prompt{background:var(--regles-soft);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;font-weight:500}
+
+.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;align-self:flex-start}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.ph-regles{background:var(--regles-soft);color:var(--regles)}
+.ph-pre{background:var(--pre-soft);color:var(--pre)}
+.ph-ovu{background:var(--ovu-soft);color:var(--ovu)}
+.ph-post{background:var(--post-soft);color:var(--post)}
+.ph-fin{background:var(--post-soft);color:var(--post)}
+.hormones{font-size:13px;color:var(--muted);font-weight:500}
+.status h2{font-style:italic}
+.fert{border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.fert b{font-size:15px;display:flex;align-items:center;gap:8px}
+.fert b::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor;flex:none}
+.fert p{font-size:14px;color:var(--fg)}
+.fert ul{margin:2px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+.f-ok{background:var(--ok-soft)} .f-ok b{color:var(--ok)}
+.f-high{background:var(--regles-soft)} .f-high b{color:var(--regles)}
+.f-warn{background:var(--warn-soft)} .f-warn b{color:var(--warn)}
+.f-muted{background:var(--surface-2)} .f-muted b{color:var(--muted)}
+
+/* Saisie du jour */
+.form{display:flex;flex-direction:column;gap:18px}
+.frow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.flab{font-weight:600;font-size:15px;display:flex;flex-direction:column}
+.flab small{font-weight:400;font-size:12px;color:var(--muted)}
+.temp{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.temp input{width:104px;text-align:center;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.temp input::placeholder{color:var(--muted);opacity:.6;font-weight:500}
+.tmeta{display:flex;align-items:center;gap:10px;margin-top:-8px}
+.glaire{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.glaire button{border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:22px 1fr;column-gap:8px;text-align:left;align-items:center}
+.glaire svg{grid-row:span 2;width:22px;height:26px}
+.glaire b{font-size:14px}
+.glaire small{font-size:11.5px;color:var(--muted);line-height:1.25}
+.glaire button[aria-pressed="true"]{border-color:var(--ovu);background:var(--ovu-soft)}
+.dots5{display:flex;gap:6px}
+.dots5 button{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:var(--surface);padding:0}
+.dots5 button.on{background:var(--pre);border-color:var(--pre)}
+.dots5.moral button.on{background:var(--ovu);border-color:var(--ovu)}
+details.more summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600;list-style:none;padding:4px 0}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::before{content:"+ "}
+details.more[open] summary::before{content:"– "}
+details.more > div{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 13px;font-size:14px;font-weight:500}
+.chip.mini{padding:5px 11px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.chip.flow[aria-pressed="true"]{background:var(--regles);border-color:var(--regles);color:var(--on-accent)}
+
+/* Courbe */
+.curve-wrap{overflow-x:auto;margin:0 -20px;padding:0 20px;-webkit-overflow-scrolling:touch}
+.curve{display:block}
+.curve text{font-family:var(--f-body);font-size:10px;fill:var(--muted)}
+.curve .lab{font-size:10.5px;font-weight:600}
+.facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.facts li{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:8px}
+.facts li:first-child{border-top:0;padding-top:0}
+.facts b{font-variant-numeric:tabular-nums;text-align:right}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
+
+/* Calendrier */
+.cal-head{display:flex;align-items:center;justify-content:space-between}
+.cal-head h2::first-letter{text-transform:uppercase}
+.iconbtn{border:0;background:var(--surface);box-shadow:var(--shadow);width:42px;height:42px;border-radius:50%;font-size:20px;display:grid;place-items:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px 2px;text-align:center}
+.cal-grid .wl{font-size:12px;color:var(--muted);font-weight:600;padding-bottom:6px}
+.cal-grid button{border:0;background:none;padding:2px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.cal-grid .num{font-weight:500}
+.cal-grid .is-today .num{font-weight:700}
+.dot{width:5px;height:5px;border-radius:50%}
+.dot.on{background:var(--muted)}
+
+/* Mon cycle */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:var(--surface);border-radius:20px;padding:14px 12px;box-shadow:var(--shadow);min-width:0}
+.tile b{display:block;font-family:var(--f-display);font-weight:400;font-size:28px;line-height:1.1}
+.tile span{font-size:12px;color:var(--muted);font-weight:500}
+.ph-table{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px 12px;align-items:center;font-size:14px}
+.ph-table .hd{font-size:12px;color:var(--muted);font-weight:600}
+.mb{display:flex;align-items:center;gap:8px}
+.bar{flex:1;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px}
+.mb b{font-variant-numeric:tabular-nums;font-size:13px;width:26px;text-align:right}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.hist li:first-child{border-top:0}
+.hist .d{font-weight:600}
+.danger{border:0;background:none;color:var(--danger);font-weight:600;font-size:14px;padding:6px 4px}
+.danger.armed{background:var(--danger);color:var(--surface);border-radius:999px;padding:6px 12px}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.switch{width:50px;height:30px;border-radius:99px;border:0;background:var(--line);position:relative;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--surface);transition:left .2s}
+.switch[aria-checked="true"]{background:var(--ok)}
+.switch[aria-checked="true"]::after{left:23px}
+details.rules summary{cursor:pointer;font-weight:600}
+.tbl{overflow-x:auto;margin-top:12px}
+.tbl table{border-collapse:collapse;font-size:13px;width:100%}
+.tbl td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
+.tbl td:first-child{font-weight:600;white-space:nowrap}
+
+label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;color:var(--muted)}
+input[type="date"],input[type="text"],textarea{font:inherit;font-size:16px;color:var(--fg);background:var(--surface-2);border:1.5px solid transparent;border-radius:14px;padding:12px 14px;width:100%;min-width:0}
+textarea{min-height:120px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.err{color:var(--danger);font-size:13px}
+
+/* Feuille */
+.backdrop{position:fixed;inset:0;background:rgba(25,12,17,.35);z-index:30}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;max-height:90vh;overflow:auto;background:var(--bg);border-radius:28px 28px 0 0;
+  padding:8px max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));animation:up .28s ease-out}
+.sheet-inner{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 0}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ok{border:0;background:var(--fg);color:var(--bg);border-radius:999px;padding:10px 18px;font-weight:700}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+
+/* Onglets */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.tabs nav{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);padding:4px}
+.tabs button svg{width:24px;height:24px}
+.tabs button[aria-current="page"]{color:var(--regles)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--fg);color:var(--bg);border-radius:999px;padding:12px 18px;display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+.toast button{border:0;background:none;color:var(--regles);font-weight:700;padding:4px 6px}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}.switch::after{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <main id="v-today" class="view"></main>
+  <main id="v-curve" class="view" hidden></main>
+  <main id="v-cal" class="view" hidden></main>
+  <main id="v-me" class="view" hidden></main>
+</div>
+
+<div class="tabs"><nav>
+  <button data-tab="today" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="3.5" r="2" fill="currentColor" stroke="none"/></svg>Aujourd'hui</button>
+  <button data-tab="curve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 16l4-3 3 2 4-8 3 3 4-2"/><path d="M3 20h18" opacity=".5"/></svg>Courbe</button>
+  <button data-tab="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="4"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendrier</button>
+  <button data-tab="me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>Mon cycle</button>
+</nav></div>
+
+<div id="sheetWrap" hidden><div class="backdrop" id="backdrop"></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-inner" id="sheet"></div></div></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ===== Dates (AAAA-MM-JJ, calcul en UTC) ===== */
+const toD=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d))};
+const toS=d=>d.toISOString().slice(0,10);
+const addDays=(s,n)=>{const d=toD(s);d.setUTCDate(d.getUTCDate()+n);return toS(d)};
+const diff=(a,b)=>Math.round((toD(b)-toD(a))/864e5);
+const todayS=()=>{const n=new Date();return toS(new Date(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())))};
+const fmt=(s,o)=>new Intl.DateTimeFormat('fr-FR',Object.assign({timeZone:'UTC'},o||{day:'numeric',month:'long'})).format(toD(s));
+const fmtS=s=>fmt(s,{day:'numeric',month:'short'}).replace('.','');
+const plural=(n,w)=>n+' '+w+(Math.abs(n)>1?'s':'');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const f2=n=>n.toFixed(2).replace('.',',');
+const EPS=1e-9;
+
+/* ===== Contenu ===== */
+const PH={
+  regles:{name:'Règles',hormones:'Œstrogènes et progestérone au plus bas',title:'Le corps fait une pause',txt:"Les hormones sont au plus bas. L'énergie est souvent en retrait : c'est le moment de ralentir, de dormir un peu plus et de rester au chaud."},
+  pre:{name:'Pré-ovulatoire',hormones:'Les œstrogènes montent',title:"L'énergie remonte",txt:"Avec la montée des œstrogènes, énergie, motivation et envie de voir du monde reviennent souvent. Bon moment pour lancer des choses."},
+  ovu:{name:'Ovulatoire',hormones:"Pic d'œstrogènes",title:'Le pic du cycle',txt:"Les œstrogènes sont au plus haut et la glaire devient fertile. Souvent le moment où l'on se sent le mieux, et le plus fertile du cycle."},
+  post:{name:'Post-ovulatoire',hormones:'La progestérone domine',title:'Plus posée, plus calme',txt:"Après l'ovulation, la progestérone prend le relais et la température monte. On est souvent plus posée et concentrée, avec un sommeil plus profond."},
+  fin:{name:'Post-ovulatoire · avant les règles',hormones:'La progestérone chute avant les règles',title:"Un coup de mou, c'est normal",txt:"Fatigue, moral en baisse, irritabilité ou fringales sont fréquents juste avant les règles. Ce sont les hormones qui chutent, pas toi."}
+};
+const PH_ORDER=['regles','pre','ovu','post','fin'];
+const PH_SHORT={regles:'Règles',pre:'Pré-ovulatoire',ovu:'Ovulatoire',post:'Post-ovulatoire',fin:'Avant les règles'};
+const PH_COL={regles:'--regles',pre:'--pre',ovu:'--ovu',post:'--post',fin:'--post'};
+const GL=[{l:'Sèche',h:'rien vu, rien senti'},{l:'Pâteuse',h:'collante, non étirable'},{l:'Humide',h:'crémeuse, blanche'},{l:"Blanc d'œuf",h:'mouillée, glissante, filante'}];
+const ENERGY=['Épuisée','Fatiguée','Correcte','En forme','Au top'];
+const MORAL=['Au plus bas','Bof','Neutre','Bien','Très bien'];
+const SYMPT=['Crampes','Fatigue','Ballonnements','Maux de tête','Seins sensibles','Fringales','Irritabilité','Peau'];
+const FLOWS=['Léger','Moyen','Abondant'];
+const COL=['Col haut','Col ouvert','Col mou'];
+
+/* ===== Données ===== */
+const KEY='maree-v2';
+let data=null, demo=false, tab='today', calMonth=null, curveIdx=null, ST, AN=[];
+const moreOpen={};
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+function save(){if(demo)return;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function sortP(){data.periods.sort((a,b)=>a.start<b.start?-1:1)}
+const day=ds=>data.days[ds]||{};
+function setDay(ds,patch){const d=Object.assign({},day(ds),patch);
+  Object.keys(d).forEach(k=>{if(d[k]==null||d[k]===''||d[k]===false||(Array.isArray(d[k])&&!d[k].length))delete d[k]});
+  if(Object.keys(d).length)data.days[ds]=d;else delete data.days[ds];save()}
+
+function stats(){
+  const T=todayS(),ps=data.periods,cl=[];
+  for(let i=1;i<ps.length;i++){const l=diff(ps[i-1].start,ps[i].start);if(l>=18&&l<=50)cl.push(l)}
+  const lc=cl.slice(-6),avgC=lc.length?Math.round(mean(lc)):28;
+  const pl=ps.filter(p=>p.end).map(p=>diff(p.start,p.end)+1).filter(l=>l>=1&&l<=12).slice(-6);
+  return {T,avgC,minC:lc.length>=2?Math.min(...lc):avgC-3,maxC:lc.length>=2?Math.max(...lc):avgC+3,
+    avgP:pl.length?Math.round(mean(pl)):5,nCycles:cl.length,nPeriods:pl.length};
+}
+function isOngoing(p){if(p.end)return false;const d=diff(p.start,ST.T);return d>=0&&d<=14}
+function effEnd(p){if(p.end)return p.end;if(isOngoing(p))return ST.T;return addDays(p.start,ST.avgP-1)}
+function covering(ds){return data.periods.findIndex(p=>p.start<=ds&&ds<=effEnd(p))}
+function cycleIndex(ds){let i=-1;data.periods.forEach((p,k)=>{if(p.start<=ds)i=k});return i}
+
+/* ===== Lecture du cycle selon le livre =====
+   Température : NMB = moyenne des 6 températures valides avant la montée ; NMH = NMB + 0,30.
+   Décalage confirmé = 4 températures valides qui se suivent (sans jour manquant), toutes >= NMH, écart max 0,10 entre elles.
+   Glaire : niveau 0 sèche, 1 pâteuse, 2 humide/crémeuse, 3 blanc d'œuf. Premier signe fertile = premier niveau >= 1 (ou col fertile).
+   Pic = dernier jour du niveau le plus fertile (>= 2). Validé après 4 jours secs (niveau <= 1) qui se suivent ;
+   un retour de glaire >= 2 ou un jour non noté remet le compte à zéro.
+   Infertilité post-ovulatoire = à partir du plus tardif : 4e point haut, 4e jour sec après le pic. */
+function analyze(i){
+  const ps=data.periods,p=ps[i],start=p.start;
+  const end=i+1<ps.length?addDays(ps[i+1].start,-1):ST.T;
+  const pEnd=effEnd(p), A={i,start,end,pEnd,hasT:false,hasG:false,dryDays:[]};
+  let maxL=-1,pic=null,run=[],picValid=null,firstSign=null;
+  for(let d=addDays(pEnd,1);d<=end;d=addDays(d,1)){
+    const o=data.days[d]||{},lvl=o.glaire,colF=data.settings.col&&o.col&&o.col.length;
+    if(lvl!=null)A.hasG=true;
+    if(!firstSign&&((lvl!=null&&lvl>=1)||colF))firstSign=d;
+    if(picValid)continue;
+    if(lvl==null){run=[];continue}
+    if(lvl>=2&&lvl>=maxL){maxL=lvl;pic=d;run=[]}
+    else if(lvl>=2){run=[]}
+    else if(pic){run.push(d);if(run.length===4)picValid=d}
+  }
+  Object.assign(A,{firstSign,pic,picValid,dryDays:pic?run:[],dry:pic?run.length:0});
+  const has=d=>data.days[d]&&data.days[d].temp!=null;
+  const noGap=(a,b)=>{for(let d=a;d<=b;d=addDays(d,1))if(!has(d))return false;return true};
+  const pts=[];for(let d=start;d<=end;d=addDays(d,1)){const o=data.days[d];if(o&&o.temp!=null)pts.push({d,t:o.temp,x:!!o.dist})}
+  A.hasT=pts.length>0;A.pts=pts;
+  const v=pts.filter(q=>!q.x);
+  A.shift=null;A.partial=null;
+  for(let k=6;k<v.length;k++){
+    const nmb=mean(v.slice(k-6,k).map(q=>q.t)),nmh=nmb+0.30;
+    if(v[k].t<nmh-EPS)continue;
+    const r=[v[k]];
+    for(let j=k+1;j<v.length&&r.length<4;j++){if(v[j].t>=nmh-EPS)r.push(v[j]);else break}
+    const ts=r.map(q=>q.t),stable=Math.max(...ts)-Math.min(...ts)<=0.10+EPS,cont=noGap(r[0].d,r[r.length-1].d);
+    const res={nmb,nmh,highs:r.map(q=>q.d),lows:v.slice(k-6,k).map(q=>q.d),warn:mean(ts)-nmb>0.5+EPS};
+    if(r.length===4&&stable&&cont){A.shift=res;break}
+    if(!A.partial&&k+r.length===v.length&&stable&&cont)A.partial=res;
+  }
+  A.jipo=A.shift&&A.picValid?(A.shift.highs[3]>A.picValid?A.shift.highs[3]:A.picValid):null;
+  const ov=A.shift?addDays(A.shift.highs[0],-1):null;
+  A.ov=ov;A.nextWin=ov?[addDays(ov,12),addDays(ov,16)]:null;
+  return A;
+}
+function calPhase(n,L,P){const ov=Math.max(L-14,P+3);if(n<=P)return'regles';if(n>L-4)return'fin';if(n<ov-5)return'pre';if(n<=ov+1)return'ovu';return'post'}
+function phaseForDate(ds){
+  const i=cycleIndex(ds);if(i<0)return null;
+  const p=data.periods[i],A=AN[i],nx=data.periods[i+1];
+  if(ds<=effEnd(p))return'regles';
+  const nextS=nx?nx.start:(A.nextWin?addDays(A.nextWin[0],2):addDays(p.start,ST.avgC));
+  const toNext=diff(ds,nextS);
+  if(A.hasT||A.hasG){
+    let ph='pre';
+    if((A.shift&&ds>=A.shift.highs[0])||(A.picValid&&ds>A.pic))ph='post';
+    else if(A.firstSign&&ds>=A.firstSign)ph='ovu';
+    if(ph==='post'&&toNext>=1&&toNext<=4)ph='fin';
+    return ph;
+  }
+  const L=nx?diff(p.start,nx.start):Math.max(ST.avgC,diff(p.start,ds)+1);
+  return calPhase(diff(p.start,ds)+1,L,diff(p.start,effEnd(p))+1);
+}
+function fertStatus(A,ongoing){
+  const T=ST.T,s=n=>n>1?'s':'';
+  const tLine=A.shift?`Température : décalage confirmé le ${fmtS(A.shift.highs[3])}`:A.partial?`Température : ${A.partial.highs.length} point${s(A.partial.highs.length)} haut${s(A.partial.highs.length)} sur 4`:A.hasT?'Température : pas encore de montée':'Température : non notée ce cycle';
+  const gLine=A.picValid?`Glaire : pic validé le ${fmtS(A.picValid)}`:A.pic?`Glaire : pic le ${fmtS(A.pic)}, ${A.dry} jour${s(A.dry)} sec${s(A.dry)} sur 4`:A.hasG?'Glaire : pas encore de pic':'Glaire : non notée ce cycle';
+  const det=[tLine,gLine];if(A.shift&&A.shift.warn)det.push('Montée de plus de 0,50 °C : fièvre possible, à vérifier');
+  if(ongoing)return{cls:'f-warn',label:'Fertilité possible',txt:"Pendant les règles, le livre considère la fertilité comme possible, jamais exclue."};
+  if(A.jipo&&T>=A.jipo)return{cls:'f-ok',label:'Infertilité post-ovulatoire',txt:`Double contrôle validé le ${fmtS(A.jipo)} : température et glaire confirment que l'ovulation est passée.`,det};
+  if(!A.hasT&&!A.hasG)return{cls:'f-muted',label:'Estimation seulement',txt:"Sans température ni glaire notées, l'app devine à partir du calendrier. Ne vous y fiez pas pour éviter une grossesse."};
+  if(A.shift&&!A.hasG)return{cls:'f-warn',label:'Ovulation passée selon la température',txt:"Le double contrôle demande aussi la glaire. Sans elle, restez prudents.",det};
+  if(A.firstSign||A.pic||A.shift)return{cls:'f-high',label:'Fertilité certaine',txt:(A.shift||A.picValid)?"Un signe confirme l'ovulation, l'autre pas encore. Considérez-vous fertiles jusqu'au double contrôle.":"Glaire fertile observée : c'est la période la plus fertile du cycle.",det};
+  return{cls:'f-warn',label:'Fertilité possible',txt:"Pas encore de glaire fertile notée, mais cette période n'est jamais considérée comme sûre. Protégez-vous.",det};
+}
+function nextWindow(A){
+  if(A.nextWin)return{w:A.nextWin,src:'calculé avec ta température'};
+  const s=data.periods[A.i].start;
+  return{w:[addDays(s,ST.minC),addDays(s,ST.maxC)],src:ST.nCycles>=2?'estimé sur tes cycles':'estimation par défaut'};
+}
+
+/* Marques du calendrier */
+function marks(){
+  const m={},put=(d,k)=>{(m[d]=m[d]||{})[k]=1},ps=data.periods,T=ST.T;
+  if(!ps.length)return m;
+  ps.forEach((p,i)=>{const e=effEnd(p);for(let d=p.start;d<=e;d=addDays(d,1))put(d,'period');
+    const A=AN[i];
+    if(A.hasT||A.hasG){if(A.firstSign){const stop=A.jipo?addDays(A.jipo,-1):A.end;for(let d=A.firstSign;d<=stop;d=addDays(d,1))put(d,'fertile')}}
+    else{const nx=ps[i+1],L=nx?diff(p.start,nx.start):ST.avgC,ov=addDays(p.start,Math.max(L-14,ST.avgP+3)-1);for(let j=-5;j<=1;j++)put(addDays(ov,j),'fertest')}});
+  const last=ps[ps.length-1],A=AN[ps.length-1];
+  if(isOngoing(last))for(let d=addDays(T,1);d<=addDays(last.start,ST.avgP-1);d=addDays(d,1))put(d,'pred');
+  let base;
+  if(!isOngoing(last)){
+    const {w}=nextWindow(A);
+    for(let d=w[0];d<=w[1];d=addDays(d,1))if(d>T)put(d,'pred');
+    base=A.nextWin?addDays(A.nextWin[0],2):addDays(last.start,ST.avgC);
+  }else base=addDays(last.start,ST.avgC);
+  if(base<T)base=T;
+  for(let k=1;k<=8;k++){const s=addDays(base,k*ST.avgC);for(let j=0;j<ST.avgP;j++)put(addDays(s,j),'pred');
+    const ov=addDays(base,(k-1)*ST.avgC+ST.avgC-15);for(let j=-5;j<=1;j++)put(addDays(ov,j),'fertest')}
+  return m;
+}
+function markClass(mk){if(!mk)return'';if(mk.period)return'm-period';if(mk.pred)return'm-pred';if(mk.fertile)return'm-fertile';if(mk.fertest)return'm-fertest';return''}
+
+/* ===== Exemple ===== */
+function demoData(){
+  const T=todayS(),offs=[-106,-79,-48,-19],pl=[5,6,5,5];
+  const starts=offs.map(o=>addDays(T,o));
+  const d={periods:starts.map((s,i)=>({start:s,end:addDays(s,pl[i]-1)})),days:{},settings:{col:false}};
+  const rnd=n=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x)};
+  starts.forEach((s,i)=>{
+    const L=i<3?diff(s,starts[i+1]):28,end=i<3?addDays(starts[i+1],-1):T,ov=L-14;
+    for(let n=1;addDays(s,n-1)<=end;n++){
+      const ds=addDays(s,n-1),r=rnd(n+i*40),rec={};
+      if(n>pl[i])rec.temp=n<=ov?+(36.40+r*0.14).toFixed(2):+(36.84+r*0.09).toFixed(2);
+      if(i===1&&n===ov-3){rec.temp=36.82;rec.dist=true}
+      if(n>pl[i])rec.glaire=n<ov-5?0:n<ov-3?1:n<ov-1?2:n<=ov?3:n<=ov+6?0:(r<.6?0:1);
+      const ph=n<=pl[i]?'regles':n>L-4?'fin':n<ov-5?'pre':n<=ov+1?'ovu':'post';
+      const base={regles:[2,3],pre:[4,4],ovu:[5,5],post:[3,4],fin:[2,2]}[ph],v=r<.25?-1:r>.85?1:0;
+      rec.energy=Math.max(1,Math.min(5,base[0]+v));rec.moral=Math.max(1,Math.min(5,base[1]+(r>.5?0:v)));
+      if(ph==='regles'){rec.symptoms=['Crampes','Fatigue'];rec.flow=n===2?'Abondant':n<=3?'Moyen':'Léger'}
+      if(ph==='fin')rec.symptoms=r<.5?['Fatigue','Irritabilité']:['Ballonnements','Fringales'];
+      d.days[ds]=rec;
+    }
+  });
+  return d;
+}
+
+/* ===== Saisie du jour (partagée entre Aujourd'hui et la fiche d'un jour) ===== */
+function drop(i){const h=[0,7,13,20][i];
+  return `<svg viewBox="0 0 22 26" aria-hidden="true"><defs><clipPath id="dc${i}"><path d="M11 2C7 8 4 12 4 16a7 7 0 0 0 14 0c0-4-3-8-7-14z"/></clipPath></defs>
+  <rect x="0" y="${24-h}" width="22" height="${h}" fill="var(--ovu)" clip-path="url(#dc${i})" opacity=".85"/>
+  <path d="M11 2C7 8 4 12 4 16a7 7 0 0 0 14 0c0-4-3-8-7-14z" fill="none" stroke="var(--ovu)" stroke-width="1.6"/></svg>`}
+function scale(k,lab,words,v,cls){
+  return `<div class="frow"><div class="flab">${lab}<small>${v?words[v-1]:'Touche pour noter'}</small></div>
+  <div class="dots5 ${cls||''}">${[1,2,3,4,5].map(n=>`<button data-${k}="${n}" aria-label="${lab} : ${words[n-1]}" aria-pressed="${v===n}" class="${v&&n<=v?'on':''}"></button>`).join('')}</div></div>`}
+function dayForm(ds,pre){
+  const d=day(ds),inP=covering(ds)>=0,colOn=data.settings.col;
+  const extras=[];
+  extras.push(`<div><h3>Symptômes</h3><div class="chips">${SYMPT.map(x=>`<button class="chip mini" data-sym="${x}" aria-pressed="${(d.symptoms||[]).includes(x)}">${x}</button>`).join('')}</div></div>`);
+  if(colOn)extras.push(`<div><h3>Col (le soir)</h3><div class="chips">${COL.map(x=>`<button class="chip mini" data-col="${x}" aria-pressed="${(d.col||[]).includes(x)}">${x}</button>`).join('')}</div></div>`);
+  if(!inP)extras.push(`<div><h3>Saignement hors règles</h3><div class="chips"><button class="chip mini" data-spot aria-pressed="${!!d.spot}">Quelques traces</button></div></div>`);
+  return `<div class="form">
+    <div class="frow"><div class="flab">Température<small>au réveil, avant de te lever</small></div>
+      <div class="temp"><input type="text" id="${pre}temp" inputmode="decimal" autocomplete="off" placeholder="--,--" value="${d.temp!=null?f2(d.temp):''}" aria-label="Température en degrés">°C</div></div>
+    ${d.temp!=null?`<div class="tmeta"><button class="chip mini" data-dist aria-pressed="${!!d.dist}">Nuit perturbée</button><span class="small muted">${d.dist?'Point exclu des calculs':'Couchée tard, malade, alcool'}</span></div>`:''}
+    <p class="err" id="${pre}terr" hidden>Entre une température entre 35,5 et 38 °C, avec 2 décimales sans arrondir.</p>
+    ${inP?`<div class="frow"><div class="flab">Flux</div><div class="chips">${FLOWS.map(f=>`<button class="chip mini flow" data-flow="${f}" aria-pressed="${d.flow===f}">${f}</button>`).join('')}</div></div>`:
+    `<div><div class="flab">Glaire<small>le soir, garde le plus fertile de la journée</small></div>
+      <div class="glaire">${GL.map((g,i)=>`<button data-gl="${i}" aria-pressed="${d.glaire===i}">${drop(i)}<b>${g.l}</b><small>${g.h}</small></button>`).join('')}</div></div>`}
+    ${scale('energy','Énergie',ENERGY,d.energy)}
+    ${scale('moral','Moral',MORAL,d.moral,'moral')}
+    <details class="more" data-more="${ds}" ${moreOpen[ds]?'open':''}><summary>Symptômes${colOn?', col':''}${inP?'':', saignement'}</summary><div>${extras.join('')}</div></details>
+  </div>`;
+}
+function bindForm(root,ds,pre,redraw){
+  const d=day(ds),q=s=>root.querySelectorAll(s);
+  const ti=root.querySelector('#'+pre+'temp');
+  if(ti){ti.onchange=()=>{const raw=ti.value.trim().replace(',','.');
+      if(!raw){setDay(ds,{temp:null,tempAt:null,dist:null});redraw();return}
+      const t=parseFloat(raw);if(isNaN(t)||t<35.5||t>38){root.querySelector('#'+pre+'terr').hidden=false;return}
+      setDay(ds,{temp:Math.round(t*100)/100,tempAt:d.tempAt||new Date().toISOString()});redraw();toast('Température notée')};
+    ti.onkeydown=e=>{if(e.key==='Enter')ti.blur()}}
+  q('[data-dist]').forEach(b=>b.onclick=()=>{setDay(ds,{dist:!d.dist});redraw()});
+  q('[data-gl]').forEach(b=>b.onclick=()=>{const n=+b.dataset.gl;setDay(ds,{glaire:d.glaire===n?null:n});redraw()});
+  q('[data-energy]').forEach(b=>b.onclick=()=>{const n=+b.dataset.energy;setDay(ds,{energy:d.energy===n?null:n});redraw()});
+  q('[data-moral]').forEach(b=>b.onclick=()=>{const n=+b.dataset.moral;setDay(ds,{moral:d.moral===n?null:n});redraw()});
+  q('[data-flow]').forEach(b=>b.onclick=()=>{setDay(ds,{flow:d.flow===b.dataset.flow?null:b.dataset.flow});redraw()});
+  q('[data-spot]').forEach(b=>b.onclick=()=>{setDay(ds,{spot:!d.spot});redraw()});
+  const tog=(key,val)=>{const a=(d[key]||[]).slice(),i=a.indexOf(val);i<0?a.push(val):a.splice(i,1);setDay(ds,{[key]:a});redraw()};
+  q('[data-sym]').forEach(b=>b.onclick=()=>tog('symptoms',b.dataset.sym));
+  q('[data-col]').forEach(b=>b.onclick=()=>tog('col',b.dataset.col));
+  q('[data-more]').forEach(el=>el.ontoggle=()=>{moreOpen[ds]=el.open});
+}
+
+/* ===== Aujourd'hui ===== */
+/* Découpage du cycle en cours en 4 phases (jours depuis le J1) */
+function layout(A,cd,ongoing){
+  const s=A.start;
+  const P=ongoing?Math.max(cd,ST.avgP):diff(s,A.pEnd)+1;
+  let L=A.nextWin?diff(s,A.nextWin[0])+2:ST.avgC;if(cd>L)L=cd;
+  const ovE=Math.max(L-14,P+3);
+  let s1=A.firstSign?diff(s,A.firstSign):ovE-6,s2=A.shift?diff(s,A.shift.highs[0]):A.picValid?diff(s,A.pic)+1:ovE+1;
+  s1=Math.max(P,Math.min(s1,L));s2=Math.max(s1,Math.min(s2,L));
+  return {P,s1,s2,L,fin:Math.max(s2,L-4),segs:[['regles',0,P],['pre',P,s1],['ovu',s1,s2],['post',s2,L]].filter(x=>x[2]-x[1]>=1)};
+}
+const RL={regles:['Règles','Règles'],pre:['Pré-ovulatoire','Pré-ovu.'],ovu:['Ovulation','Ovu.'],post:['Post-ovulatoire','Post-ovu.']};
+function ringLabels(segs,L,r){
+  const ang=d=>d/L*2*Math.PI-Math.PI/2,pt=(R,a)=>`${(130+R*Math.cos(a)).toFixed(1)} ${(130+R*Math.sin(a)).toFixed(1)}`;
+  return segs.map(([k,a,b],i)=>{
+    const a0=ang(a),a1=ang(b),bottom=Math.sin((a0+a1)/2)>0.2,R=bottom?r+22:r+13,arc=(a1-a0)*R-8;
+    let txt=RL[k][0];if(txt.length*6.3>arc)txt=RL[k][1];if(txt.length*6.3>arc)return'';
+    const large=a1-a0>Math.PI?1:0;
+    const d=bottom?`M ${pt(R,a1)} A ${R} ${R} 0 ${large} 0 ${pt(R,a0)}`:`M ${pt(R,a0)} A ${R} ${R} 0 ${large} 1 ${pt(R,a1)}`;
+    return `<path id="rl${i}" d="${d}" fill="none"/><text class="rlab" style="fill:var(${PH_COL[k]})"><textPath href="#rl${i}" xlink:href="#rl${i}" startOffset="50%" text-anchor="middle">${txt}</textPath></text>`}).join('');
+}
+function ring(A,cd,ongoing,ph){
+  const r=108,C=2*Math.PI*r,gap=4,{L,segs}=layout(A,cd,ongoing);
+  const arcs=segs.map(([k,a,b])=>`<circle cx="130" cy="130" r="${r}" fill="none" stroke="var(${PH_COL[k]})" stroke-width="16" stroke-linecap="round" stroke-dasharray="${Math.max(0.1,(b-a)/L*C-gap-12)} ${C}" stroke-dashoffset="${-(a/L*C+gap/2+6)}" transform="rotate(-90 130 130)" opacity=".9"/>`).join('');
+  const ang=((Math.min(cd,L)-.5)/L)*2*Math.PI-Math.PI/2,x=130+r*Math.cos(ang),y=130+r*Math.sin(ang);
+  return `<svg class="ring" viewBox="-12 -12 284 284" role="img" aria-label="Jour ${cd} du cycle, ${PH_SHORT[ph]}">
+    <circle cx="130" cy="130" r="${r}" fill="none" stroke="var(--surface-2)" stroke-width="16"/>${arcs}${ringLabels(segs,L,r)}
+    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="13" fill="var(--surface)" stroke="var(${PH_COL[ph]})" stroke-width="5"/></svg>`;
+}
+function renderToday(){
+  const v=document.getElementById('v-today'),T=ST.T;
+  let h=`<header class="top"><div><p class="eyebrow">${fmt(T,{weekday:'long',day:'numeric',month:'long'})}</p><h1 class="brand">Marée</h1></div></header>`;
+  if(demo)h+=`<div class="demo"><span>Données d'exemple pour essayer</span><button id="startReal">Commencer avec mes dates</button></div>`;
+  if(!data.periods.length){
+    h+=`<section class="card"><h2>Quand ont commencé tes dernières règles ?</h2>
+      <label class="f">Premier jour de vraies règles<input type="date" id="obStart" max="${T}" value="${T}"></label>
+      <label class="f">Dernier jour, si elles sont finies<input type="date" id="obEnd" max="${T}"></label>
+      <p class="err" id="obErr" hidden></p><button class="primary" id="obGo">C'est parti</button>
+      <p class="info">Tu pourras ajouter tes cycles précédents dans « Mon cycle » pour de meilleures prévisions dès le départ.</p></section>`;
+    v.innerHTML=h;bindToday();return;
+  }
+  const li=data.periods.length-1,last=data.periods[li],A=AN[li],ongoing=isOngoing(last),cd=diff(last.start,T)+1,ph=phaseForDate(T),mk=marks();
+  h+='<div class="week">';
+  for(let i=-3;i<=3;i++){const ds=addDays(T,i);
+    h+=`<button data-day="${ds}" class="${i===0?'is-today':''}"><span class="wd">${i===0?'Auj.':fmt(ds,{weekday:'short'}).replace('.','')}</span><span class="num ${markClass(mk[ds])}">${toD(ds).getUTCDate()}</span></button>`}
+  h+='</div>';
+  let lab,big,sub;
+  if(ongoing){lab='Règles';big='Jour '+cd;sub=cd<=ST.avgP?'Fin probable le '+fmt(addDays(last.start,ST.avgP-1)):'Plus longues que ta moyenne'}
+  else{const {w,src}=nextWindow(A),a=diff(T,w[0]),b=diff(T,w[1]);
+    if(b<0){lab='Retard';big=plural(-b,'jour');sub='au-delà de la fourchette prévue'}
+    else if(a<=0){lab='Règles attendues';big=b===0?"aujourd'hui":"d'ici "+b+' j';sub='entre le '+fmtS(w[0])+' et le '+fmtS(w[1])}
+    else{lab='Règles dans';big=a===b?a+' j':a+' à '+b+' j';sub='Jour '+cd+' · '+src}}
+  h+=`<section class="hero">${ring(A,cd,ongoing,ph)}<div class="ring-center"><span class="ring-label">${lab}</span><span class="ring-big">${big}</span><span class="ring-sub">${sub}</span></div></section>
+    <p class="info" style="text-align:center;margin-top:-8px">Un tour = un cycle, du premier jour des règles au suivant. Le point blanc, c'est aujourd'hui.</p>`;
+  if(ongoing&&cd>7&&last.snooze!==T)h+=`<div class="prompt">Tes règles durent depuis ${cd} jours. Sont-elles terminées ?<div class="row"><button class="ghost" id="endYest">Oui, hier</button><button class="ghost" id="snooze">Toujours en cours</button></div></div>`;
+  h+=ongoing?`<button class="primary end" id="mainBtn">Mes règles sont terminées</button>`:`<button class="primary" id="mainBtn">Mes règles ont commencé</button>`;
+  const P=PH[ph],fs=fertStatus(A,ongoing);
+  h+=`<article class="card status"><span class="pill ph-${ph}">${P.name}</span><span class="hormones">${P.hormones}</span><h2>${P.title}</h2><p>${P.txt}</p>
+    <div class="fert ${fs.cls}"><b>${fs.label}</b><p>${fs.txt}</p>${fs.det?`<ul>${fs.det.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}</div></article>`;
+  h+=`<article class="card" id="todayForm"><h3 style="margin:0">Ma journée</h3>${dayForm(T,'t')}</article>`;
+  v.innerHTML=h;bindToday();
+  bindForm(document.getElementById('todayForm'),T,'t',render);
+}
+function bindToday(){
+  const $=id=>document.getElementById(id);
+  $('startReal')&&($('startReal').onclick=()=>{demo=false;data={periods:[],days:{},settings:{col:false}};save();render()});
+  $('obGo')&&($('obGo').onclick=()=>{const s=$('obStart').value,e=$('obEnd').value,err=$('obErr');
+    if(!s){err.textContent='Choisis le premier jour de tes règles.';err.hidden=false;return}
+    if(e&&(e<s||diff(s,e)>15)){err.textContent='Le dernier jour doit être après le premier, et moins de 15 jours plus tard.';err.hidden=false;return}
+    data.periods=[{start:s,end:e||null}];save();render();toast('Cycle enregistré')});
+  $('mainBtn')&&($('mainBtn').onclick=()=>{const snap=JSON.stringify(data),T=ST.T,last=data.periods[data.periods.length-1];
+    if(last&&isOngoing(last)){last.end=T;toast('Fin des règles notée',snap)}
+    else{if(!data.periods.some(p=>p.start===T))data.periods.push({start:T,end:null});sortP();toast('Début des règles noté',snap)}
+    save();render()});
+  $('endYest')&&($('endYest').onclick=()=>{const snap=JSON.stringify(data),l=data.periods[data.periods.length-1];l.end=addDays(ST.T,-1);save();render();toast('Fin des règles notée',snap)});
+  $('snooze')&&($('snooze').onclick=()=>{data.periods[data.periods.length-1].snooze=ST.T;save();render()});
+}
+
+/* ===== Courbe (façon livre) ===== */
+function renderCurve(){
+  const v=document.getElementById('v-curve');
+  let h=`<header class="top"><h1 class="brand">Courbe</h1></header>`;
+  if(!data.periods.length){v.innerHTML=h+`<p class="muted">Note le début de tes règles pour commencer ta première courbe.</p>`;return}
+  const li=data.periods.length-1;if(curveIdx==null||curveIdx>li)curveIdx=li;
+  const A=AN[curveIdx],s=A.start,isCur=curveIdx===li;
+  const N=Math.max(diff(s,A.end)+1,isCur?(A.nextWin?diff(s,A.nextWin[1])+1:ST.avgC):0,isCur?28:0);
+  const temps=A.pts.map(q=>q.t).concat(A.shift?[A.shift.nmh]:[]);
+  let lo=temps.length?Math.floor((Math.min(...temps)-0.1)*10)/10:36.2,hi=temps.length?Math.ceil((Math.max(...temps)+0.1)*10)/10:37.2;
+  if(hi-lo<0.8)hi=+(lo+0.8).toFixed(1);
+  const cw=22,lw=40,top=22,rh=9,plotH=Math.round((hi-lo)/0.05)*rh,W=lw+N*cw+8,H=top+plotH+78;
+  const X=n=>lw+(n-.5)*cw,Y=t=>top+(hi-t)/(hi-lo)*plotH,dn=d=>diff(s,d)+1;
+  let g='';
+  // bandes : règles, fertile, infertile
+  for(let n=1;n<=N;n++){const d=addDays(s,n-1),x=lw+(n-1)*cw;
+    if(d<=A.pEnd)g+=`<rect x="${x}" y="${top}" width="${cw}" height="${plotH}" fill="var(--regles-soft)"/>`;
+    else if(A.firstSign&&d>=A.firstSign&&(!A.jipo||d<A.jipo)&&d<=A.end)g+=`<rect x="${x}" y="${top}" width="${cw}" height="${plotH}" fill="var(--ovu-soft)"/>`;
+    else if(A.jipo&&d>=A.jipo&&d<=A.end)g+=`<rect x="${x}" y="${top}" width="${cw}" height="${plotH}" fill="var(--ok-soft)"/>`;}
+  for(let t=lo;t<=hi+EPS;t=+(t+0.05).toFixed(2)){const y=Y(t),major=Math.round(t*100)%10===0;
+    g+=`<line x1="${lw}" x2="${lw+N*cw}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="${major?1:.5}"/>`;
+    if(major)g+=`<text x="${lw-5}" y="${y+3.5}" text-anchor="end">${t.toFixed(1).replace('.',',')}</text>`}
+  for(let n=0;n<=N;n++)g+=`<line x1="${lw+n*cw}" x2="${lw+n*cw}" y1="${top}" y2="${top+plotH}" stroke="var(--line)" stroke-width=".5"/>`;
+  if(A.shift){const xs=X(dn(A.shift.lows[0]))-cw/2,xh=X(dn(A.shift.highs[0]))-cw/2,xe=lw+N*cw;
+    g+=`<line x1="${xs}" x2="${xe}" y1="${Y(A.shift.nmb)}" y2="${Y(A.shift.nmb)}" stroke="var(--pre)" stroke-width="1.5"/>
+      <text class="lab" x="${xs+2}" y="${Y(A.shift.nmb)+12}" style="fill:var(--pre)">NMB ${f2(A.shift.nmb)}</text>
+      <line x1="${xh}" x2="${xe}" y1="${Y(A.shift.nmh)}" y2="${Y(A.shift.nmh)}" stroke="var(--post)" stroke-width="1.5"/>
+      <text class="lab" x="${xh+2}" y="${Y(A.shift.nmh)-5}" style="fill:var(--post)">NMH ${f2(A.shift.nmh)}</text>`}
+  const vp=A.pts.filter(q=>!q.x);
+  if(vp.length>1)g+=`<polyline points="${vp.map(q=>`${X(dn(q.d))},${Y(q.t).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--fg)" stroke-width="1.4" stroke-linejoin="round" opacity=".75"/>`;
+  const highs=A.shift?A.shift.highs:A.partial?A.partial.highs:[];
+  A.pts.forEach(q=>{const x=X(dn(q.d)),y=Y(q.t),hi_=highs.indexOf(q.d);
+    if(q.x)g+=`<circle cx="${x}" cy="${y}" r="3.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.3"/>`;
+    else g+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${hi_>=0?'var(--post)':(A.shift&&A.shift.lows.includes(q.d))?'var(--pre)':'var(--fg)'}"/>`;
+    if(hi_>=0)g+=`<text class="lab" x="${x}" y="${y-7}" text-anchor="middle" style="fill:var(--post)">${hi_+1}</text>`});
+  if(isCur&&ST.T<=addDays(s,N-1))g+=`<line x1="${X(dn(ST.T))}" x2="${X(dn(ST.T))}" y1="${top-6}" y2="${top+plotH}" stroke="var(--regles)" stroke-width="1.5" stroke-dasharray="3 3"/><text class="lab" x="${X(dn(ST.T))}" y="${top-9}" text-anchor="middle" style="fill:var(--regles)">auj.</text>`;
+  const y0=top+plotH;
+  g+=`<text x="${lw-5}" y="${y0+16}" text-anchor="end">Jour</text><text x="${lw-5}" y="${y0+34}" text-anchor="end">Règles</text><text x="${lw-5}" y="${y0+52}" text-anchor="end">Glaire</text><text x="${lw-5}" y="${y0+70}" text-anchor="end">Sec</text>`;
+  for(let n=1;n<=N;n++){const d=addDays(s,n-1),x=X(n),o=data.days[d]||{};
+    g+=`<text x="${x}" y="${y0+16}" text-anchor="middle">${n}</text>`;
+    if(d<=A.pEnd&&d<=A.end||o.spot)g+=`<text class="lab" x="${x}" y="${y0+34}" text-anchor="middle" style="fill:var(--regles)">${o.spot&&d>A.pEnd?'·':'R'}</text>`;
+    if(o.glaire!=null){const sym=d===A.pic?'▲':o.glaire>=2?'△':o.glaire===1?'p':'s';
+      g+=`<text class="${o.glaire>=2?'lab':''}" x="${x}" y="${y0+52}" text-anchor="middle" style="fill:${o.glaire>=2?'var(--ovu)':'var(--muted)'}">${sym}</text>`}
+    const di=A.dryDays.indexOf(d);if(di>=0)g+=`<text class="lab" x="${x}" y="${y0+70}" text-anchor="middle" style="fill:var(--ok)">${di+1}</text>`;
+    if(d<=ST.T)g+=`<rect data-day="${d}" x="${lw+(n-1)*cw}" y="${top}" width="${cw}" height="${plotH+60}" fill="transparent"/>`}
+  h+=`<div class="cal-head"><button class="iconbtn" id="cPrev" aria-label="Cycle précédent" ${curveIdx===0?'disabled style="opacity:.3"':''}>‹</button>
+    <div style="text-align:center"><h2>Cycle du ${fmt(s)}</h2><p class="small muted">${isCur?'en cours, jour '+(diff(s,ST.T)+1):plural(diff(s,A.end)+1,'jour')}</p></div>
+    <button class="iconbtn" id="cNext" aria-label="Cycle suivant" ${isCur?'disabled style="opacity:.3"':''}>›</button></div>
+  <section class="card"><div class="curve-wrap"><svg class="curve" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Courbe de température et glaire">${g}</svg></div>
+    <div class="legend"><span><i style="background:var(--pre)"></i>6 points bas (NMB)</span><span><i style="background:var(--post)"></i>Points hauts</span><span><i style="border:1.5px solid var(--muted)"></i>Nuit perturbée</span><span>△ glaire fertile · ▲ pic · p pâteuse · s sèche</span></div>
+    <p class="info">Touche une colonne pour modifier ce jour.</p></section>`;
+  const facts=[];
+  facts.push(['Décalage thermique',A.shift?`J${dn(A.shift.highs[0])} à J${dn(A.shift.highs[3])}`:A.partial?`${A.partial.highs.length} point(s) haut(s) sur 4`:A.hasT?'pas encore':'température non notée']);
+  if(A.shift)facts.push(['NMB · NMH',`${f2(A.shift.nmb)} · ${f2(A.shift.nmh)} °C`]);
+  facts.push(['Premier signe de glaire',A.firstSign?'J'+dn(A.firstSign):A.hasG?'pas encore':'glaire non notée']);
+  facts.push(['Pic de glaire',A.pic?`J${dn(A.pic)}${A.picValid?`, validé J${dn(A.picValid)}`:`, ${A.dry} jour(s) sec(s) sur 4`}`:'pas encore']);
+  facts.push(['Infertilité post-ovulatoire',A.jipo?'dès J'+dn(A.jipo):'non confirmée']);
+  if(A.nextWin&&isCur)facts.push(['Règles attendues',`du ${fmtS(A.nextWin[0])} au ${fmtS(A.nextWin[1])}`]);
+  h+=`<section class="card"><h3 style="margin:0">Lecture du cycle</h3><ul class="facts">${facts.map(f=>`<li><span>${f[0]}</span><b>${f[1]}</b></li>`).join('')}</ul>
+    ${A.shift&&A.shift.warn?`<p class="err">Montée de plus de 0,50 °C au-dessus du NMB : le livre y voit plutôt un signe de fièvre. À vérifier.</p>`:''}</section>`;
+  v.innerHTML=h;
+  const wrap=v.querySelector('.curve-wrap'),focus=isCur?Math.min(dn(ST.T),N):(A.shift?dn(A.shift.highs[3]):N);
+  if(wrap)wrap.scrollLeft=Math.max(0,X(focus)-wrap.clientWidth*0.75);
+  document.getElementById('cPrev').onclick=()=>{if(curveIdx>0){curveIdx--;renderCurve()}};
+  document.getElementById('cNext').onclick=()=>{if(curveIdx<li){curveIdx++;renderCurve()}};
+}
+
+/* ===== Calendrier ===== */
+function renderCal(){
+  const v=document.getElementById('v-cal'),T=ST.T;
+  if(!calMonth)calMonth=T.slice(0,7)+'-01';
+  const mk=marks(),first=calMonth,dow=(toD(first).getUTCDay()+6)%7,fd=toD(first);
+  const nDays=new Date(Date.UTC(fd.getUTCFullYear(),fd.getUTCMonth()+1,0)).getUTCDate();
+  let h=`<header class="cal-head" style="padding-top:8px"><button class="iconbtn" id="prevM" aria-label="Mois précédent">‹</button><h2>${fmt(first,{month:'long',year:'numeric'})}</h2><button class="iconbtn" id="nextM" aria-label="Mois suivant">›</button></header>
+  <section class="card"><div class="cal-grid">${['L','M','M','J','V','S','D'].map(x=>`<span class="wl">${x}</span>`).join('')}`;
+  for(let i=0;i<dow;i++)h+='<span></span>';
+  for(let i=0;i<nDays;i++){const ds=addDays(first,i);
+    h+=`<button data-day="${ds}" class="${ds===T?'is-today':''}" aria-label="${fmt(ds,{weekday:'long',day:'numeric',month:'long'})}"><span class="num ${markClass(mk[ds])}">${i+1}</span><span class="dot ${data.days[ds]?'on':''}"></span></button>`}
+  h+=`</div></section>
+  <div class="legend"><span><i class="m-period"></i>Règles</span><span><i style="border:2px dashed var(--regles)"></i>Règles prévues</span><span><i style="background:var(--ovu-soft);border:1px solid var(--ovu)"></i>Fertile (observé)</span><span><i style="border:2px dashed var(--ovu)"></i>Fertile (estimé)</span></div>
+  <p class="info">Touche un jour pour noter le début ou la fin de tes règles, ou ta journée, même après coup.</p>
+  <button class="ghost" id="addPastCal">Ajouter un cycle passé</button>`;
+  v.innerHTML=h;
+  const shift=n=>{calMonth=toS(new Date(Date.UTC(fd.getUTCFullYear(),fd.getUTCMonth()+n,1)));renderCal()};
+  document.getElementById('prevM').onclick=()=>shift(-1);
+  document.getElementById('nextM').onclick=()=>shift(1);
+  document.getElementById('addPastCal').onclick=openPast;
+}
+
+/* ===== Mon cycle ===== */
+/* Courbe simple : énergie habituelle selon la phase, et le point du jour */
+function cycleCurve(){
+  const li=data.periods.length-1;if(li<0)return'';
+  const last=data.periods[li],A=AN[li],ongoing=isOngoing(last),cd=diff(last.start,ST.T)+1,Lo=layout(A,cd,ongoing),L=Lo.L,ph=phaseForDate(ST.T);
+  const W=340,top=34,base=112,strip=120,pl=4,pr=4,X=d=>pl+d/L*(W-pl-pr),Yl=v=>top+(1-v)*(base-top);
+  const kf=[[0,.32],[Lo.P*.5,.22],[Lo.P,.34],[(Lo.P+Lo.s1)/2,.58],[Lo.s1,.78],[(Lo.s1+Lo.s2)/2,.95],[Lo.s2,.84],[(Lo.s2+Lo.fin)/2,.68],[Lo.fin,.54],[L,.3]];
+  const lvl=d=>{for(let i=1;i<kf.length;i++){const[x0,y0]=kf[i-1],[x1,y1]=kf[i];if(d<=x1){if(x1<=x0)return y1;const t=(d-x0)/(x1-x0);return y0+(y1-y0)*(1-Math.cos(Math.PI*t))/2}}return kf[kf.length-1][1]};
+  const pts=[];for(let k=0;k<=160;k++){const d=k/160*L;pts.push(`${X(d).toFixed(1)},${Yl(lvl(d)).toFixed(1)}`)}
+  let g='';
+  Lo.segs.forEach(([k,a,b],i)=>{const x0=X(a)+(i?1:0),x1=X(b)-1;
+    g+=`<rect x="${x0}" y="${top-14}" width="${Math.max(0,x1-x0)}" height="${base-top+14}" fill="var(${PH_COL[k]}-soft)" opacity=".7"/>
+      <rect x="${x0}" y="${strip}" width="${Math.max(0,x1-x0)}" height="8" rx="4" fill="var(${PH_COL[k]})"/>
+      <text x="${(x0+x1)/2}" y="${i%2?strip+38:strip+23}" text-anchor="middle" style="fill:var(${PH_COL[k]})">${RL[k][(x1-x0)<70?1:0]}</text>`});
+  if(L-Lo.fin>=2){const xf=X(Lo.fin);g+=`<line x1="${xf}" x2="${xf}" y1="${top-14}" y2="${base}" stroke="var(--post)" stroke-dasharray="3 3"/>
+    <text x="${W-pr}" y="${top-20}" text-anchor="end" style="fill:var(--post);font-weight:500;font-style:italic">avant les règles</text>`}
+  g+=`<polyline points="${pts.join(' ')}" fill="none" stroke="var(--fg)" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round" opacity=".55"/>`;
+  // Sa forme réelle : moyenne énergie + moral du jour (1 à 5), ramenée sur la même échelle
+  const forme=ds=>{const o=data.days[ds]||{},v=[o.energy,o.moral].filter(Boolean);return v.length?(mean(v)-1)/4:null};
+  const mine=[];for(let n=1;n<=Math.min(cd,L);n++){const f=forme(addDays(last.start,n-1));if(f!=null)mine.push({n,x:X(n-.5),y:Yl(.08+f*.9)})}
+  let runs=[],cur=[];mine.forEach((q,i)=>{if(i&&q.n!==mine[i-1].n+1){runs.push(cur);cur=[]}cur.push(q)});if(cur.length)runs.push(cur);
+  runs.forEach(r=>{if(r.length>1)g+=`<polyline points="${r.map(q=>`${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')}" fill="none" stroke="var(--fg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`});
+  mine.forEach(q=>g+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="2.6" fill="var(--fg)"/>`);
+  const tm=mine.find(q=>q.n===cd);
+  const td=Math.min(cd,L)-.5,tx=X(td),ty=tm?tm.y:Yl(lvl(td)),anc=tx<60?'start':tx>W-60?'end':'middle';
+  g+=`<line x1="${tx}" x2="${tx}" y1="${ty}" y2="${strip+8}" stroke="var(--fg)" stroke-width="1.2" stroke-dasharray="2 3"/>
+    <circle cx="${tx}" cy="${ty}" r="7" fill="var(--surface)" stroke="var(${PH_COL[ph]})" stroke-width="3.5"/>
+    <text x="${tx}" y="${ty-13}" text-anchor="${anc}" style="fill:var(--fg)">Aujourd'hui</text>`;
+  return `<section class="card"><h3 style="margin:0">Où j'en suis</h3>
+    <p class="small muted" style="margin-top:-6px">Jour ${cd} sur environ ${L} · ${PH[ph].name}</p>
+    <svg class="pcurve" viewBox="0 0 ${W} ${strip+46}" role="img" aria-label="Position dans le cycle : jour ${cd}, ${PH[ph].name}">${g}</svg>
+    <div class="legend"><span><svg width="22" height="6" aria-hidden="true"><line x1="0" x2="22" y1="3" y2="3" stroke="var(--fg)" stroke-width="1.6" stroke-dasharray="4 4" opacity=".55"/></svg>Énergie habituelle (tendance générale)</span>
+      <span><svg width="22" height="6" aria-hidden="true"><line x1="0" x2="22" y1="3" y2="3" stroke="var(--fg)" stroke-width="2.2"/></svg>Ta forme notée (énergie et moral)</span></div>
+    ${mine.length?'':`<p class="info">Note ton énergie et ton moral dans « Ma journée » : ta propre courbe apparaîtra ici, un point par jour.</p>`}</section>`;
+}
+function renderMe(){
+  const v=document.getElementById('v-me'),T=ST.T;
+  let h=`<header class="top"><h1 class="brand">Mon cycle</h1></header>`+cycleCurve();
+  const li=data.periods.length-1;
+  let nxt='–';if(li>=0){const last=data.periods[li];if(!isOngoing(last)){const {w}=nextWindow(AN[li]);nxt=fmtS(w[0]>T?w[0]:T)}}
+  h+=`<div class="tiles"><div class="tile"><b>${ST.avgC} j</b><span>Cycle moyen${ST.nCycles?` (${ST.minC} à ${ST.maxC})`:' (par défaut)'}</span></div>
+    <div class="tile"><b>${ST.avgP} j</b><span>Durée des règles${ST.nPeriods?'':' (par défaut)'}</span></div>
+    <div class="tile"><b>${nxt}</b><span>Prochaines règles, au plus tôt</span></div></div>`;
+  const acc={};PH_ORDER.forEach(k=>acc[k]={e:[],m:[]});
+  Object.keys(data.days).forEach(ds=>{if(ds>T)return;const o=data.days[ds],ph=phaseForDate(ds);if(!ph)return;if(o.energy)acc[ph].e.push(o.energy);if(o.moral)acc[ph].m.push(o.moral)});
+  const any=PH_ORDER.some(k=>acc[k].e.length||acc[k].m.length);
+  const cell=(a,col)=>{const m=a.length?mean(a):0;return `<div class="mb"><div class="bar"><i style="width:${m/5*100}%;background:var(${col})"></i></div><b>${a.length?m.toFixed(1).replace('.',','):'–'}</b></div>`};
+  h+=`<section class="card"><h3 style="margin:0">Ta forme selon la phase</h3>${any?`<div class="ph-table"><span></span><span class="hd">Énergie</span><span class="hd">Moral</span>
+    ${PH_ORDER.map(k=>`<span><span class="pill ph-${k}" style="padding:3px 9px;font-size:12px">${PH_SHORT[k]}</span></span>${cell(acc[k].e,'--pre')}${cell(acc[k].m,'--ovu')}`).join('')}</div>
+    <p class="info">Moyennes sur 5, calculées sur tes journées notées. « Avant les règles » = les 4 derniers jours du cycle.</p>`
+    :`<p class="muted">Note ton énergie et ton moral quelques jours par cycle : tu verras ici dans quelle phase tu es le plus en forme, et si les coups de mou tombent juste avant les règles.</p>`}</section>`;
+  const ps=data.periods.slice().reverse();
+  h+=`<section class="card"><h3 style="margin:0">Historique des règles</h3>${ps.length?`<ul class="hist">${ps.map(p=>{const i=data.periods.indexOf(p),nx=data.periods[i+1],e=effEnd(p);
+    return `<li><div><div class="d">${fmtS(p.start)} → ${p.end||!isOngoing(p)?fmtS(e):'en cours'}</div>
+    <div class="small muted">${plural(diff(p.start,e)+1,'jour')}${p.end||isOngoing(p)?'':' (fin estimée)'}${nx?' · cycle de '+diff(p.start,nx.start)+' j':''}</div></div>
+    <button class="danger" data-del="${p.start}">Supprimer</button></li>`}).join('')}</ul>`:`<p class="muted">Aucun cycle enregistré.</p>`}
+    <button class="ghost" id="addPast">Ajouter un cycle passé</button></section>`;
+  h+=`<section class="card"><div class="toggle"><div class="flab">Je note aussi le col<small>Facultatif. Ajoute une ligne dans la saisie du soir</small></div><button class="switch" id="colT" role="switch" aria-checked="${!!data.settings.col}" aria-label="Noter le col"></button></div></section>`;
+  h+=`<section class="card"><details class="rules"><summary>Comment l'app lit ton cycle</summary><div class="tbl"><table>
+    <tr><td>Jour 1</td><td>Premier jour de vraies règles</td></tr>
+    <tr><td>NMB</td><td>Moyenne des 6 températures valides juste avant la montée</td></tr>
+    <tr><td>NMH</td><td>NMB + 0,30 °C</td></tr>
+    <tr><td>Décalage</td><td>4 températures qui se suivent, toutes au moins au NMH, avec 0,10 °C d'écart maximum entre elles. Les nuits perturbées sont exclues</td></tr>
+    <tr><td>Glaire fertile</td><td>Tout jour différent de « sèche »</td></tr>
+    <tr><td>Pic</td><td>Dernier jour de la glaire la plus fertile (humide ou blanc d'œuf)</td></tr>
+    <tr><td>Pic validé</td><td>4 jours secs ou pâteux qui se suivent. Un retour de glaire fertile ou un jour non noté remet le compte à zéro</td></tr>
+    <tr><td>Infertilité</td><td>À partir du plus tardif des deux : 4e point haut, 4e jour sec après le pic</td></tr>
+    <tr><td>Règles</td><td>12 à 16 jours après l'ovulation (veille du 1er point haut)</td></tr>
+  </table></div><p class="info" style="margin-top:10px">Règles reprises du livre. Vérifie chaque cycle sur la courbe : l'app aide à lire, elle ne remplace pas ta propre lecture.</p></details></section>`;
+  h+=`<section class="card"><h3 style="margin:0">Sauvegarde</h3><p class="info">Tes données restent uniquement sur ce téléphone. Copie-les de temps en temps dans tes notes pour ne rien perdre.</p>
+    <div class="row"><button class="ghost" id="exportB">Copier mes données</button><button class="ghost" id="importB">Restaurer</button></div></section>`;
+  h+=`<p class="info">Les prévisions sont des estimations. Les statuts de fertilité appliquent les règles du livre à tes saisies : une saisie oubliée ou erronée fausse le résultat. Pour éviter une grossesse, ne vous fiez qu'au double contrôle validé, et en cas de doute protégez-vous.</p>
+    <button class="danger" id="wipe" style="align-self:center">Tout effacer</button>`;
+  v.innerHTML=h;
+  document.getElementById('addPast').onclick=openPast;
+  document.getElementById('exportB').onclick=exportData;
+  document.getElementById('importB').onclick=openImport;
+  document.getElementById('colT').onclick=()=>{data.settings.col=!data.settings.col;save();render()};
+  v.querySelectorAll('[data-del]').forEach(b=>armed(b,()=>{const snap=JSON.stringify(data);data.periods=data.periods.filter(p=>p.start!==b.dataset.del);save();render();toast('Règles supprimées',snap)}));
+  armed(document.getElementById('wipe'),()=>{data={periods:[],days:{},settings:{col:false}};demo=false;save();tab='today';render()});
+}
+
+/* ===== Fiche d'un jour ===== */
+let sheetDay=null;
+function openSheet(html,bind){document.getElementById('sheet').innerHTML='<div class="grab"></div>'+html;document.getElementById('sheetWrap').hidden=false;bind&&bind()}
+function closeSheet(){document.getElementById('sheetWrap').hidden=true;sheetDay=null;render()}
+document.getElementById('backdrop').onclick=closeSheet;
+function openDay(ds){sheetDay=ds;drawDay()}
+function refreshAll(){ST=stats();AN=data.periods.map((p,i)=>analyze(i))}
+function drawDay(){
+  refreshAll();
+  const ds=sheetDay,T=ST.T,future=ds>T,ci=covering(ds),mk=marks()[ds]||{};
+  let per;
+  if(future)per=`<p class="muted">${mk.pred?'Règles possibles ce jour-là.':mk.fertile||mk.fertest?'Dans la période fertile estimée.':'Rien de prévu ce jour-là.'} Estimation indicative.</p>`;
+  else if(ci>=0){const p=data.periods[ci],n=diff(p.start,ds)+1;
+    per=`<p style="font-weight:600;color:var(--regles)">Jour ${n} des règles</p><div class="row">${p.end!==ds?`<button class="ghost" id="setEnd">Dernier jour des règles</button>`:''}${p.start===ds?`<button class="danger" id="rmPer">Retirer ces règles</button>`:''}</div>`}
+  else{const prev=data.periods.filter(p=>p.start<ds&&diff(p.start,ds)<=12).pop();
+    per=`<div class="row"><button class="ghost" id="setStart" style="color:var(--regles)">Début des règles ce jour</button>${prev?`<button class="ghost" id="setEnd2">Fin des règles ce jour</button>`:''}</div>`}
+  const h=`<div class="sheet-head"><h2>${ds===T?"Aujourd'hui":fmt(ds,{weekday:'long',day:'numeric',month:'long'})}</h2><button class="ok" id="closeS">OK</button></div>
+    <section><h3>Règles</h3>${per}</section>${future?'':`<section id="sheetForm">${dayForm(ds,'s')}</section>`}`;
+  openSheet(h,()=>{
+    const $=id=>document.getElementById(id);
+    $('closeS').onclick=closeSheet;
+    if(!future)bindForm($('sheetForm'),ds,'s',drawDay);
+    $('setEnd')&&($('setEnd').onclick=()=>{data.periods[ci].end=ds;save();drawDay();toast('Fin des règles notée')});
+    $('setEnd2')&&($('setEnd2').onclick=()=>{data.periods.filter(p=>p.start<ds&&diff(p.start,ds)<=12).pop().end=ds;save();drawDay();toast('Fin des règles notée')});
+    $('setStart')&&($('setStart').onclick=()=>{const nx=data.periods.find(p=>p.start>ds&&diff(ds,p.start)<=10);
+      if(nx)nx.start=ds;else data.periods.push({start:ds,end:null});sortP();save();drawDay();toast('Début des règles noté')});
+    $('rmPer')&&armed($('rmPer'),()=>{data.periods.splice(ci,1);save();drawDay();toast('Règles retirées')});
+  });
+}
+function openPast(){
+  const T=ST.T;
+  openSheet(`<div class="sheet-head"><h2>Ajouter un cycle passé</h2><button class="ok" id="closeS">Fermer</button></div>
+    <p class="info">Ajoute tes 2 ou 3 derniers cycles de mémoire : les prévisions s'adaptent tout de suite.</p>
+    <label class="f">Premier jour des règles<input type="date" id="pS" max="${T}"></label>
+    <label class="f">Dernier jour des règles<input type="date" id="pE" max="${T}"></label>
+    <p class="err" id="pErr" hidden></p><button class="primary" id="pGo">Ajouter</button>`,()=>{
+    const $=id=>document.getElementById(id);
+    $('closeS').onclick=closeSheet;
+    $('pGo').onclick=()=>{const s=$('pS').value,e=$('pE').value,err=$('pErr'),fail=m=>{err.textContent=m;err.hidden=false};
+      if(!s||!e)return fail('Indique le premier et le dernier jour.');
+      if(e<s||diff(s,e)>15)return fail('Le dernier jour doit être après le premier, et moins de 15 jours plus tard.');
+      if(data.periods.some(p=>!(e<p.start||s>effEnd(p))))return fail('Ces dates chevauchent des règles déjà notées.');
+      data.periods.push({start:s,end:e});sortP();save();refreshAll();$('pS').value='';$('pE').value='';err.hidden=true;toast('Cycle ajouté. Tu peux en ajouter un autre.')}});
+}
+function exportData(){
+  const txt=JSON.stringify({app:'maree',v:2,exported:ST.T,data});
+  const fallback=()=>openSheet(`<div class="sheet-head"><h2>Mes données</h2><button class="ok" id="closeS">OK</button></div>
+    <p class="info">Sélectionne tout le texte et copie-le dans tes notes.</p><textarea id="exTxt" readonly>${esc(txt)}</textarea>`,
+    ()=>{document.getElementById('closeS').onclick=closeSheet;const t=document.getElementById('exTxt');t.focus();t.select()});
+  try{navigator.clipboard.writeText(txt).then(()=>toast('Données copiées. Colle-les dans tes notes.'),fallback)}catch(e){fallback()}
+}
+function openImport(){
+  openSheet(`<div class="sheet-head"><h2>Restaurer</h2><button class="ok" id="closeS">Fermer</button></div>
+    <p class="info">Colle ici une sauvegarde copiée depuis Marée. Elle remplacera les données actuelles.</p>
+    <textarea id="imTxt"></textarea><p class="err" id="imErr" hidden></p><button class="primary" id="imGo">Remplacer mes données</button>`,()=>{
+    const $=id=>document.getElementById(id);$('closeS').onclick=closeSheet;
+    armed($('imGo'),()=>{try{const o=JSON.parse($('imTxt').value),d=o.data||o;if(!Array.isArray(d.periods))throw 0;
+        data={periods:d.periods,days:d.days||{},settings:d.settings||{col:false}};sortP();demo=false;save();closeSheet();toast('Données restaurées')}
+      catch(e){$('imErr').textContent="Ce texte n'est pas une sauvegarde Marée valide.";$('imErr').hidden=false}},'Confirmer le remplacement');
+  });
+}
+
+/* ===== Outils ===== */
+function armed(btn,fn,label){if(!btn)return;const orig=btn.textContent;let t;
+  btn.onclick=()=>{if(btn.classList.contains('armed')){clearTimeout(t);fn();return}
+    btn.classList.add('armed');btn.textContent=label||'Confirmer';t=setTimeout(()=>{btn.classList.remove('armed');btn.textContent=orig},4000)}}
+let toastT;
+function toast(msg,snap){const el=document.getElementById('toast');clearTimeout(toastT);
+  el.innerHTML=esc(msg)+(snap?'<button id="undo">Annuler</button>':'');el.hidden=false;
+  if(snap)document.getElementById('undo').onclick=()=>{data=JSON.parse(snap);save();el.hidden=true;render()};
+  toastT=setTimeout(()=>el.hidden=true,4000)}
+
+function render(){
+  refreshAll();
+  document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));
+  ['today','curve','cal','me'].forEach(k=>document.getElementById('v-'+k).hidden=k!==tab);
+  ({today:renderToday,curve:renderCurve,cal:renderCal,me:renderMe})[tab]();
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;window.scrollTo(0,0);render()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-day]');if(b&&!b.closest('#sheet'))openDay(b.dataset.day)});
+
+data=load();
+if(!data||!Array.isArray(data.periods))data={periods:[],days:{},settings:{col:false}};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+data.settings=data.settings||{col:false};
+render();
+</script>
+
+</body>
+</html>
